@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Purchase_Orders.Application.IQueries.Financial;
+using Purchase_Orders.Application.Contracts.Inventory;
+using Purchase_Orders.Application.Contracts.Payments;
+using Purchase_Orders.Application.Contracts.PurchaseOrders;
+using Purchase_Orders.Application.IQueries.Payments;
 using Purchase_Orders.Application.IQueries.PurchaseOrders;
 using Purchase_Orders.Application.IQueries.PurchaseOrderStatements;
 using Purchase_Orders.Application.IQueries.Setup;
@@ -9,11 +12,14 @@ using Purchase_Orders.Application.IRepositories.Payments;
 using Purchase_Orders.Application.IRepositories.PurchaseOrders;
 using Purchase_Orders.Application.IRepositories.PurchaseOrderStatements;
 using Purchase_Orders.Application.IUOW;
+using Purchase_Orders.Application.ModuleAPIs.Inventory;
+using Purchase_Orders.Application.ModuleAPIs.Payments;
+using Purchase_Orders.Application.ModuleAPIs.PurchaseOrders;
 using Purchase_Orders.Application.Services.Payments;
 using Purchase_Orders.Application.Services.PurchaseOrders;
 using Purchase_Orders.Application.Services.PurchaseOrderStatements;
 using Purchase_Orders.Data;
-using Purchase_Orders.Data.Queries.Financial;
+using Purchase_Orders.Data.Queries.Payments;
 using Purchase_Orders.Data.Queries.PurchaseOrders;
 using Purchase_Orders.Data.Queries.PurchaseOrderStatements;
 using Purchase_Orders.Data.Queries.Setup;
@@ -41,7 +47,7 @@ builder.Services.AddCors(x => x.AddDefaultPolicy(x => x.WithOrigins("http://loca
 builder.Services.AddAutoMapper(typeof(Program));
 
 builder.Services.AddScoped<ILookupQuery, LookupQuery>();
-builder.Services.AddScoped<IFinancialQuery, FinancialQuery>();
+builder.Services.AddScoped<IPaymentQuery, PaymentQuery>();
 builder.Services.AddScoped<IPurchaseOrderQuery, PurchaseOrderQuery>();
 builder.Services.AddScoped<IPurchaseOrderStatementQuery, PurchaseOrderStatementQuery>();
 
@@ -56,6 +62,11 @@ builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 builder.Services.AddScoped<IPurchaseOrderStatementService, PurchaseOrderStatementService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
+//cross module contracts
+builder.Services.AddScoped<IPurchaseOrderReadService, PurchaseOrderReadService>();
+builder.Services.AddScoped<IPaymentReadService, PaymentReadService>();
+builder.Services.AddScoped<IPaymentCommandService, PaymentCommandService>();
+builder.Services.AddScoped<IInventoryCommandService, InventoryCommandService>();
 
 builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
 {

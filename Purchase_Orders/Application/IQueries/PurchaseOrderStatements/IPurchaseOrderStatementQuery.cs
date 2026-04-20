@@ -1,4 +1,5 @@
-﻿using Purchase_Orders.Application.Dtos.PurchaseOrderStatements;
+﻿using Purchase_Orders.Application.Dtos.PurchaseOrders;
+using Purchase_Orders.Application.Dtos.PurchaseOrderStatements;
 using Purchase_Orders.Domain.PurchaseOrders;
 
 namespace Purchase_Orders.Application.IQueries.PurchaseOrderStatements
@@ -14,6 +15,8 @@ namespace Purchase_Orders.Application.IQueries.PurchaseOrderStatements
         Task<Guid?> GetLastApprovedStatementIdAsync(Guid purchaseOrderId);
         Task<int?> GetLastNumberAsync(Guid purchaseOrderId);
         Task<NewStatementDto?> GetBasicNewStatementAsync(Guid purchaseOrderId);
-        Task<PurchaseOrderSnapshotDto?> GetPurchaseOrderSnapshotAsync(Guid purchaseOrderId);
+        Task<decimal?> GetApprovedStatementsTotalAmount(Guid purchaseOrderId);
+        Task<decimal> GetViolationsTotal(PurchaseOrder purchaseOrder);
+        Task<Guid?> GetPurchaseOrderIdByStatementIdAsync(Guid statementId);
     }
 }

@@ -3,13 +3,12 @@ using Purchase_Orders.Application.Common.Exceptions;
 using Purchase_Orders.Application.Dtos.PurchaseOrderStatements;
 using Purchase_Orders.Application.IQueries.PurchaseOrders;
 using Purchase_Orders.Application.IQueries.PurchaseOrderStatements;
-using Purchase_Orders.Application.IRepositories.Inventory;
 using Purchase_Orders.Application.IRepositories.PurchaseOrderStatements;
 using Purchase_Orders.Application.IUOW;
-using Purchase_Orders.Domain.Inventory.Enums;
-using Purchase_Orders.Domain.Inventory;
 using Purchase_Orders.Domain.PurchaseOrders.Enums;
 using Purchase_Orders.Domain.PurchaseOrders;
+using Purchase_Orders.Application.Contracts.Inventory;
+using Purchase_Orders.Application.Contracts.Inventory.Dtos;
 
 namespace Purchase_Orders.Application.Services.PurchaseOrderStatements
 {
@@ -18,20 +17,20 @@ namespace Purchase_Orders.Application.Services.PurchaseOrderStatements
         private readonly IPurchaseOrderQuery _purchaseOrderQuery;
         private readonly IPurchaseOrderStatementQuery _purchaseOrderStatementQuery;
         private readonly IPurchaseOrderStatementRepository _purchaseOrderStatementRepository;
-        private readonly IInventoryRepository _inventoryRepository;
+        private readonly IInventoryCommandService _inventoryCommandService;
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
 
         public PurchaseOrderStatementService(IPurchaseOrderQuery purchaseOrderQuery,
             IPurchaseOrderStatementQuery purchaseOrderStatementQuery,
             IPurchaseOrderStatementRepository purchaseOrderStatementRepository,
-            IInventoryRepository inventoryRepository,
+            IInventoryCommandService inventoryCommandService,
             IUnitOfWork uow, IMapper mapper)
         {
             _purchaseOrderQuery = purchaseOrderQuery;
             _purchaseOrderStatementQuery = purchaseOrderStatementQuery;
             _purchaseOrderStatementRepository = purchaseOrderStatementRepository;
-            _inventoryRepository = inventoryRepository;
+            _inventoryCommandService = inventoryCommandService;
             _uow = uow;
             _mapper = mapper;
         }
@@ -98,10 +97,10 @@ namespace Purchase_Orders.Application.Services.PurchaseOrderStatements
             if (statement == null)
                 throw new NotFoundException("Purchase order statement not found.");
 
-            var purchaseOrderSnapshot = await _purchaseOrderStatementQuery
-                .GetPurchaseOrderSnapshotAsync(statement.PurchaseOrderId);
+            var purchaseOrderDetail = await _purchaseOrderQuery
+                .GetPurchaseOrderDetailAsync(statement.PurchaseOrderId);
 
-            if (purchaseOrderSnapshot == null)
+            if (purchaseOrderDetail == null)
                 throw new NotFoundException("Purchase order not found.");
 
             var statementDto = new StatementDto
@@ -112,14 +111,14 @@ namespace Purchase_Orders.Application.Services.PurchaseOrderStatements
                 Ref = statement.Ref,
                 Remarks = statement.Remarks,
                 State = (short)statement.State,
-                PoNumber = purchaseOrderSnapshot.Number,
-                PoDate = purchaseOrderSnapshot.Date.ToString("dd MMM yyyy"),
-                PoReference = purchaseOrderSnapshot.Reference,
-                Project = purchaseOrderSnapshot.Project,
-                Supplier = purchaseOrderSnapshot.Supplier,
-                Currency = purchaseOrderSnapshot.Currency,
-                CurrencyFactor = purchaseOrderSnapshot.CurrencyFactor,
-                Items = purchaseOrderSnapshot.Items
+                PoNumber = purchaseOrderDetail.Number,
+                PoDate = purchaseOrderDetail.Date.ToString("dd MMM yyyy"),
+                PoReference = purchaseOrderDetail.Reference,
+                Project = purchaseOrderDetail.Project,
+                Supplier = purchaseOrderDetail.Supplier,
+                Currency = purchaseOrderDetail.Currency,
+                CurrencyFactor = purchaseOrderDetail.CurrencyFactor,
+                Items = purchaseOrderDetail.Items
                     .OrderBy(i => i.LineNo)
                     .Select(i => new StatementItemDto
                     {
@@ -132,9 +131,9 @@ namespace Purchase_Orders.Application.Services.PurchaseOrderStatements
                         QuantityPo = i.Quantity,
                         QuantityAccum = 0,
                         UnitPrice = i.UnitPrice,
-                        DiscountPercent = i.DiscountPercent ?? purchaseOrderSnapshot.DiscountPercent,
+                        DiscountPercent = i.DiscountPercent ?? purchaseOrderDetail.DiscountPercent,
                         AmountCurrent = 0,
-                        AmountPo = i.Quantity * i.UnitPrice * ((1 - i.DiscountPercent) ?? (1 - purchaseOrderSnapshot.DiscountPercent)),
+                        AmountPo = i.Quantity * i.UnitPrice * ((1 - i.DiscountPercent) ?? (1 - purchaseOrderDetail.DiscountPercent)),
                         AmountAccum = 0
                     })
                     .ToList(),
@@ -202,10 +201,8 @@ namespace Purchase_Orders.Application.Services.PurchaseOrderStatements
 
             foreach (var item in forInventoryList)
             {
-                _inventoryRepository.Add(new InventoryMovement
+                _inventoryCommandService.CreateInventoryMovement(new InventoryMovementCreationSnapshotDto
                 {
-                    Date = DateOnly.FromDateTime(DateTime.Now),
-                    Kind = InventoryMovementKind.PoReceipt,
                     StoreId = storeId.Value,
                     ItemId = item.ItemId,
                     UnitId = item.UnitId,
